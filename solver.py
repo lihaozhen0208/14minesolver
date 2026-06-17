@@ -7,18 +7,20 @@ from copy import deepcopy
 
 
 class MinesweeperSolver:
-    def __init__(self, board: List[str], rules: Optional[List[str]] = None):
+    def __init__(self, board: List[str], rules: Optional[List[str]] = None, remaining_mines: Optional[int] = None):
         """Initialize solver with board state and rules.
 
         Args:
             board: list of string rows
-            rules: list of single-letter rule identifiers (e.g. ['V'])
+            rules: list of single-letter rule identifiers (e.g. ['V', 'M'])
+            remaining_mines: total remaining mines count (optional, not affected by M rule)
         """
         self.board = [list(row) for row in board]
         self.rows = len(self.board)
         self.cols = len(self.board[0]) if self.board else 0
         # Rules: default to ['V'] (the existing Minesweeper rules)
         self.rules = rules if rules else ['V']
+        self.remaining_mines = remaining_mines  # Global constraint: total mines left
 
         # Currently only rule 'V' (standard propagation) is supported.
         self.possible = {}
@@ -105,6 +107,26 @@ class MinesweeperSolver:
                                 if not self.possible[(nr, nc)]:
                                     return False
                                 changed = True
+        
+        # Apply remaining mines constraint (if specified)
+        if self.remaining_mines is not None:
+            confirmed_mines = sum(1 for r in range(self.rows) for c in range(self.cols) 
+                                if self.board[r][c] == 'x')
+            
+            # Count cells that must be mines or could be mines
+            possible_mines = sum(1 for states in self.possible.values() 
+                               if 'mine' in states)
+            
+            # If confirmed + possible >= remaining, we have enough potential
+            if confirmed_mines > self.remaining_mines:
+                return False  # Contradiction
+            
+            # If confirmed + possible == remaining, mark rest as safe
+            if confirmed_mines + possible_mines == self.remaining_mines:
+                for cell, states in self.possible.items():
+                    if 'safe' in states and len(states) > 1:
+                        self.possible[cell] = {'safe'}
+                        changed = True
         
         return True
     
