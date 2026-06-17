@@ -9,6 +9,7 @@ class MapSolver:
     def __init__(self, map_file='map.txt'):
         self.map_file = map_file
         self.board = None
+        self.config_file = 'config.txt'
     
     def load_map(self) -> bool:
         """Load board from map.txt file."""
@@ -42,7 +43,29 @@ class MapSolver:
     
     def find_next_move(self):
         """Find the next safe cell to click."""
-        return MinesweeperSolver(self.board).solve()
+        # Pass rules into solver (currently only 'V' supported)
+        rules = getattr(self, 'rules', None)
+        return MinesweeperSolver(self.board, rules=rules).solve()
+
+    def load_config(self) -> None:
+        """Load rule lines from config file into self.rules."""
+        self.rules = ['V']
+        if not os.path.exists(self.config_file):
+            return
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                lines = [ln.strip() for ln in f.readlines() if ln.strip()]
+            # Each non-empty line is a rule identifier (letters)
+            parsed = []
+            for ln in lines:
+                # split composite rules (continuous letters) into tokens
+                # e.g. "V" or "AB" -> ['V'], ['AB'] — keep as lines for now
+                parsed.append(ln)
+            if parsed:
+                self.rules = parsed
+        except Exception:
+            # keep defaults on error
+            pass
     
     def analyze(self):
         """Analyze and output results."""
@@ -53,6 +76,11 @@ class MapSolver:
         
         if not self.load_map():
             return False
+
+        # load config (rules)
+        self.load_config()
+
+        print(f"Rules: {self.rules}")
         
         print("Board:")
         for i, row in enumerate(self.board):

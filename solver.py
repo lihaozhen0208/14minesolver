@@ -7,17 +7,48 @@ from copy import deepcopy
 
 
 class MinesweeperSolver:
-    def __init__(self, board: List[str]):
-        """Initialize solver with board state."""
+    def __init__(self, board: List[str], rules: Optional[List[str]] = None):
+        """Initialize solver with board state and rules.
+
+        Args:
+            board: list of string rows
+            rules: list of single-letter rule identifiers (e.g. ['V'])
+        """
         self.board = [list(row) for row in board]
         self.rows = len(self.board)
         self.cols = len(self.board[0]) if self.board else 0
-        
+        # Rules: default to ['V'] (the existing Minesweeper rules)
+        self.rules = rules if rules else ['V']
+
+        # Currently only rule 'V' (standard propagation) is supported.
         self.possible = {}
         for r in range(self.rows):
             for c in range(self.cols):
                 if self.board[r][c] == '?':
                     self.possible[(r, c)] = {'mine', 'safe'}
+    
+    def is_colored_cell(self, r: int, c: int) -> bool:
+        """Check if cell is colored (black) in checkerboard pattern.
+        Top-left (0,0) is colored. (r+c) % 2 == 0 means colored."""
+        return (r + c) % 2 == 0
+    
+    def get_required_mines(self, r: int, c: int, base_value: int) -> int:
+        """Get the required mine count after applying rules.
+        
+        Args:
+            r, c: cell position
+            base_value: number shown on cell (0-8)
+            
+        Returns:
+            adjusted required mine count based on rules
+        """
+        required = base_value
+        
+        # Rule M: colored (black) cells count as double
+        if 'M' in self.rules and self.is_colored_cell(r, c):
+            required *= 2
+        
+        return required
     
     def get_neighbors(self, r: int, c: int) -> List[Tuple[int, int]]:
         """Get all 8 neighbors."""
@@ -46,7 +77,8 @@ class MinesweeperSolver:
                     if cell not in '0123456789y':
                         continue
                     
-                    required_mines = 0 if cell == 'y' else int(cell)
+                    base_value = 0 if cell == 'y' else int(cell)
+                    required_mines = self.get_required_mines(r, c, base_value)
                     neighbors = self.get_neighbors(r, c)
                     
                     confirmed_mines = 0
@@ -113,7 +145,8 @@ class MinesweeperSolver:
                     if cell not in '0123456789y':
                         continue
                     
-                    required_mines = 0 if cell == 'y' else int(cell)
+                    base_value = 0 if cell == 'y' else int(cell)
+                    required_mines = self.get_required_mines(r, c, base_value)
                     neighbors = self.get_neighbors(r, c)
                     
                     confirmed_mines = 0
