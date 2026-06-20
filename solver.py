@@ -34,6 +34,8 @@ class MinesweeperSolver:
             for c in range(self.cols):
                 if self.board[r][c] == '?':
                     self.possible[(r, c)] = {'mine', 'safe'}
+        # In-memory cache for definite analysis results for this solver instance
+        self._cached_definite: Optional[Tuple[Set[Tuple[int, int]], Set[Tuple[int, int]]]] = None
     
     def is_colored_cell(self, r: int, c: int) -> bool:
         """Check if cell is colored (checkerboard pattern).
@@ -185,18 +187,75 @@ class MinesweeperSolver:
                 if len(states) == 1 and 'mine' in states}
 
     def find_definite_cells(self) -> Tuple[Set[Tuple[int, int]], Set[Tuple[int, int]]]:
-        """Return (safe_cells, mine_cells) determined by propagation."""
+        """Return (safe_cells, mine_cells) determined by propagation and hypothesis testing.
+
+        This first runs constraint propagation. Then for any remaining undecided
+        cell it checks both assumptions (`mine` / `safe`) using the recursive
+        search; if one assumption leads to contradiction the opposite state is
+        definite. Iterates until no further cells are determined.
+        """
+        # Use cached result when available for this solver instance
+        if self._cached_definite is not None:
+            cached_safes, cached_mines = self._cached_definite
+            return set(cached_safes), set(cached_mines)
+
         if not self.propagate_constraints():
             return set(), set()
-        safes = set()
-        mines = set()
-        for cell, states in self.possible.items():
-            if len(states) == 1:
-                if 'safe' in states:
-                    safes.add(cell)
-                elif 'mine' in states:
-                    mines.add(cell)
+
+        changed = True
+        # Iterate: propagate -> hypothesis-test undecided cells -> propagate again
+        while changed:
+            changed = False
+
+            # Collect current definite cells
+            safes = {cell for cell, states in self.possible.items() if len(states) == 1 and 'safe' in states}
+            mines = {cell for cell, states in self.possible.items() if len(states) == 1 and 'mine' in states}
+
+            # For undecided cells, try hypothesis testing
+            undecided = [cell for cell, states in self.possible.items() if len(states) > 1]
+            for cell in undecided:
+                # If either assumption is impossible, fix the cell to the opposite
+                can_be_mine = self.can_have_solution_with_assumption(cell, 'mine')
+                can_be_safe = self.can_have_solution_with_assumption(cell, 'safe')
+
+                if not can_be_mine and can_be_safe:
+                    # must be safe
+                    if 'safe' in self.possible.get(cell, set()):
+                        self.possible[cell] = {'safe'}
+                        safes.add(cell)
+                        changed = True
+                elif not can_be_safe and can_be_mine:
+                    # must be mine
+                    if 'mine' in self.possible.get(cell, set()):
+                        self.possible[cell] = {'mine'}
+                        mines.add(cell)
+                        changed = True
+                elif not can_be_safe and not can_be_mine:
+                    # No valid assignment: contradiction
+                    # cache current findings then return
+                    self._cached_definite = (set(safes), set(mines))
+                    return safes, mines
+
+            if changed:
+                if not self.propagate_constraints():
+                    self._cached_definite = (set(safes), set(mines))
+                    return safes, mines
+
+        # Final definite sets
+        safes = {cell for cell, states in self.possible.items() if len(states) == 1 and 'safe' in states}
+        mines = {cell for cell, states in self.possible.items() if len(states) == 1 and 'mine' in states}
+        # store in-instance cache
+        self._cached_definite = (set(safes), set(mines))
         return safes, mines
+
+    def find_cell_state(self, cell: Tuple[int, int]) -> str:
+        """Return 'safe', 'mine' or 'unknown' for a single cell using in-memory analysis cache."""
+        safes, mines = self.find_definite_cells()
+        if cell in safes:
+            return 'safe'
+        if cell in mines:
+            return 'mine'
+        return 'unknown'
     
     def can_have_solution_with_assumption(self, cell: Tuple[int, int], state: str) -> bool:
         """Check if there's a valid solution with assumption."""

@@ -143,9 +143,15 @@ class MapSolver:
                 print(f"  ({r}, {c})")
             print()
 
-        # Use solver to find definite safe/mine cells and update map
+        # Use solver (with cache) to find definite safe/mine cells and update map
         solver = MinesweeperSolver(self.board, rules=self.rules, remaining_mines=self.remaining_mines)
         safes, mines = solver.find_definite_cells()
+
+        # Example: analyze a specific cell (4,2) if present (0-based indices)
+        target = (4, 2)
+        if 0 <= target[0] < solver.rows and 0 <= target[1] < solver.cols:
+            st = solver.find_cell_state(target)
+            print(f"Analysis for cell {target}: {st}")
 
         if safes or mines:
             if mines:
