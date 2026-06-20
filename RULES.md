@@ -58,13 +58,48 @@ Rule M board:
 
 ## 🧪 Testing
 
+No dedicated unit test scripts are included in this distribution (debug/test scripts were removed to keep the repository minimal). To run the core program:
+
 ```bash
-python test_rules.py
+python map_solver.py
 ```
 
-## 🔧 Implementation Details
+## 🗑️ 缓存清理（Cache cleanup）
 
-- Rules are read as a list of strings from config.txt
-- Multiple rules can be combined (each on a separate line)
-- The solver applies all active rules when computing mine requirements
-- Currently supports: V (standard), M (multi-mine)
+- 已删除: `__pycache__/` 目录及所有 `*.pyc` 缓存文件。
+- 原因: Python 的字节码缓存是平台/环境相关的，提交到 git 会增加噪音并可能引起平台差异问题。
+
+请确保本地开发时不要将缓存文件加入版本控制（见下文 `.gitignore` 建议）。
+
+## 🧠 设计思路（Design rationale）
+
+- 仓库只保留核心可运行程序：`map_solver.py`, `solver.py`, `map.txt`, `config.txt`, 文档等。
+- 所有临时、调试或生成的文件（如日志、调试输出、枚举结果、缓存）不应纳入版本控制，以保持仓库整洁和可复现性。
+- 编码/环境相关的本地规则或配置（例如本地的编码说明文件）应保持为本地私有文件，并在 `.gitignore` 中列明，**不要上传到远程仓库**。
+- 在需要共享的实现细节中，优先将设计思路写入 `RULES.md` 或 `README.md`，而不是通过生成的中间文件共享。
+
+## .gitignore 建议
+
+请在仓库根目录添加 `.gitignore`，至少包含下列条目：
+
+```
+__pycache__/
+*.pyc
+# 本地编码/环境规则文件（示例名，实际命名请根据本地情况替换）
+encoding_rules.txt
+encoding.*
+```
+
+上述 `encoding_rules.txt`（或类似命名）应当只存在于本地开发环境，并且不会被提交到 git。
+
+## Git 提交建议
+
+在确认 `.gitignore` 配置无误后，将剩余核心文件提交到 git：
+
+```bash
+git init        # 如尚未初始化仓库
+git add .
+git commit -m "Keep core solver files; ignore cache and local encoding rules"
+```
+
+如需将仓库推送到远端，请按常规配置 `git remote add` 和 `git push`。

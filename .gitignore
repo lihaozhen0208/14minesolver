@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+# Local encoding/environment rule files (keep local, do not commit)
+encoding_rules.txt
+encoding.*
+
+# Ignore common editor temp files
+*.swp
+*.swo
+Thumbs.db
+\.DS_Store

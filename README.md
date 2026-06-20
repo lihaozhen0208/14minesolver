@@ -17,8 +17,19 @@ A constraint satisfaction solver for Minesweeper that finds the next safe cell t
 Each cell can be represented as:
 - `x` - Confirmed mine
 - `y` or `0` - Zero mines in the 8 neighbors (all neighbors are safe)
-- `1-8` - Number of mines in the 8 neighbors
+- `1-8` or multi-digit numbers like `10`, `11`, etc. - Number of mines in the 8 neighbors
 - `?` - Unknown cell
+
+For `map.txt`, use spaces to separate cells and newlines to separate rows. This is required when a number has more than one digit.
+
+Optionally, the last non-empty line may specify the remaining mine count by starting with `#` followed by the number (e.g. `# 2` or `#2`). This line will be ignored as a board row and treated as the global remaining mines value.
+
+Example:
+```
+y 1 ?
+1 1 ?
+? ? ?
+```
 
 ### Interactive Mode
 

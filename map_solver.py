@@ -26,23 +26,42 @@ class MapSolver:
                 print("Error: map.txt is empty!")
                 return False
             
-            # Check if last line is a number (remaining mines)
+            # Check if last non-empty line specifies remaining mines.
+            # Preferred format: '# N' or '#N'. Keep bare digit as backward compatibility.
             self.remaining_mines = None
-            if lines[-1].isdigit():
-                self.remaining_mines = int(lines[-1])
+            board_lines = lines
+            last = lines[-1].strip()
+            if last.startswith('#'):
+                rem_text = last[1:].strip()
+                try:
+                    self.remaining_mines = int(rem_text)
+                    board_lines = lines[:-1]
+                except Exception:
+                    # not a valid remaining count -> treat as board line
+                    board_lines = lines
+            elif last.isdigit():
+                # backward compatibility: a bare number on last line
+                self.remaining_mines = int(last)
                 board_lines = lines[:-1]
-            else:
-                board_lines = lines
             
             if not board_lines:
                 print("Error: no board data in map.txt!")
                 return False
-            
-            if not all(len(line) == len(board_lines[0]) for line in board_lines):
-                print("Error: All board rows must have the same length!")
+
+            parsed_board = []
+            for line in board_lines:
+                tokens = line.split()
+                if len(tokens) == 1 and len(line) > 1:
+                    # No spaces present, treat each character as one cell
+                    parsed_board.append(list(line))
+                else:
+                    parsed_board.append(tokens)
+
+            if not all(len(row) == len(parsed_board[0]) for row in parsed_board):
+                print("Error: All board rows must have the same number of cells!")
                 return False
-            
-            self.board = board_lines
+
+            self.board = parsed_board
             return True
         except Exception as e:
             print(f"Error reading map.txt: {e}")
@@ -101,7 +120,7 @@ class MapSolver:
         
         print("Board:")
         for i, row in enumerate(self.board):
-            print(f"  {row}  (row {i})")
+            print(f"  {' '.join(row)}  (row {i})")
         print()
         
         mines = self.find_confirmed_mines()
