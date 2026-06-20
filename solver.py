@@ -175,6 +175,28 @@ class MinesweeperSolver:
         
         return {cell for cell, states in self.possible.items() 
                 if len(states) == 1 and 'safe' in states}
+
+    def find_definite_mines(self) -> Set[Tuple[int, int]]:
+        """Find cells that are definitely mines."""
+        if not self.propagate_constraints():
+            return set()
+
+        return {cell for cell, states in self.possible.items()
+                if len(states) == 1 and 'mine' in states}
+
+    def find_definite_cells(self) -> Tuple[Set[Tuple[int, int]], Set[Tuple[int, int]]]:
+        """Return (safe_cells, mine_cells) determined by propagation."""
+        if not self.propagate_constraints():
+            return set(), set()
+        safes = set()
+        mines = set()
+        for cell, states in self.possible.items():
+            if len(states) == 1:
+                if 'safe' in states:
+                    safes.add(cell)
+                elif 'mine' in states:
+                    mines.add(cell)
+        return safes, mines
     
     def can_have_solution_with_assumption(self, cell: Tuple[int, int], state: str) -> bool:
         """Check if there's a valid solution with assumption."""
@@ -232,8 +254,17 @@ class MinesweeperSolver:
                         return False
             return True
 
-        # Choose a variable with smallest domain for branching
-        unresolved.sort(key=lambda c: len(possible[c]))
+        # Choose a variable with smallest domain for branching, tie-break by adjacency to numbered clues
+        def adj_number_count_board(cell):
+            rr, cc = cell
+            cnt = 0
+            for nr, nc in self.get_neighbors(rr, cc):
+                v = board[nr][nc]
+                if v == 'y' or (isinstance(v, str) and v.isdigit()):
+                    cnt += 1
+            return cnt
+
+        unresolved.sort(key=lambda c: (len(possible[c]), -adj_number_count_board(c)))
         cell = unresolved[0]
         states = list(possible[cell])
 

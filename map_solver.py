@@ -80,6 +80,19 @@ class MapSolver:
         remaining = getattr(self, 'remaining_mines', None)
         return MinesweeperSolver(self.board, rules=rules, remaining_mines=remaining).solve()
 
+    def write_map(self):
+        """Write current self.board back to the map file, preserving remaining mines line."""
+        try:
+            with open(self.map_file, 'w', encoding='utf-8') as f:
+                for row in self.board:
+                    f.write(' '.join(row) + '\n')
+                if self.remaining_mines is not None:
+                    f.write(f"#{self.remaining_mines}\n")
+            return True
+        except Exception as e:
+            print(f"Error writing map.txt: {e}")
+            return False
+
     def load_config(self) -> None:
         """Load rule lines from config file into self.rules."""
         self.rules = ['V']
@@ -129,13 +142,46 @@ class MapSolver:
             for r, c in mines:
                 print(f"  ({r}, {c})")
             print()
-        
-        next_move = self.find_next_move()
-        if next_move:
-            r, c = next_move
-            print(f"Safe cell: ({r}, {c})")
+
+        # Use solver to find definite safe/mine cells and update map
+        solver = MinesweeperSolver(self.board, rules=self.rules, remaining_mines=self.remaining_mines)
+        safes, mines = solver.find_definite_cells()
+
+        if safes or mines:
+            if mines:
+                print("Newly determined mines:")
+                for r, c in sorted(mines):
+                    print(f"  ({r}, {c})")
+                    self.board[r][c] = 'x'
+                print()
+            if safes:
+                print("Newly determined safe cells:")
+                for r, c in sorted(safes):
+                    print(f"  ({r}, {c})")
+                    # Mark as suggested safe (will require revealing in real game)
+                    self.board[r][c] = 'S'
+                print()
+
+            if self.write_map():
+                print(f"Updated map written to {self.map_file}")
+
+            print("Updated Board:")
+            for i, row in enumerate(self.board):
+                print(f"  {' '.join(row)}  (row {i})")
         else:
-            print("Could not find safe cell.")
+            # No definite cells from propagation, try hypothesis-based single safe suggestion
+            next_move = solver.solve()
+            if next_move:
+                r, c = next_move
+                print(f"Suggested safe cell (by hypothesis): ({r}, {c})")
+                self.board[r][c] = 'S'
+                if self.write_map():
+                    print(f"Updated map written to {self.map_file}")
+                print("Board with suggestion:")
+                for i, row in enumerate(self.board):
+                    print(f"  {' '.join(row)}  (row {i})")
+            else:
+                print("Could not find safe cell.")
         
         print()
         return True
