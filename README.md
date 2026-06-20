@@ -67,7 +67,9 @@ board = [
 ]
 
 solver = MinesweeperSolver(board)
-result = solver.solve()
+solver = MinesweeperSolver(board)
+# Use the 1-based API to get coordinates in (row, col) starting from 1
+result = solver.solve_one_based()
 
 if result:
     row, col = result

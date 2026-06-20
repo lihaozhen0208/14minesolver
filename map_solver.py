@@ -78,7 +78,8 @@ class MapSolver:
         # Pass rules and remaining mines to solver
         rules = getattr(self, 'rules', None)
         remaining = getattr(self, 'remaining_mines', None)
-        return MinesweeperSolver(self.board, rules=rules, remaining_mines=remaining).solve()
+        # return 1-based coordinate
+        return MinesweeperSolver(self.board, rules=rules, remaining_mines=remaining).solve_one_based()
 
     def write_map(self):
         """Write current self.board back to the map file, preserving remaining mines line."""
@@ -133,37 +134,42 @@ class MapSolver:
         
         print("Board:")
         for i, row in enumerate(self.board):
-            print(f"  {' '.join(row)}  (row {i})")
+            print(f"  {' '.join(row)}  (row {i+1})")
         print()
         
         mines = self.find_confirmed_mines()
         if mines:
             print("Confirmed mines:")
             for r, c in mines:
-                print(f"  ({r}, {c})")
+                # display as 1-based
+                print(f"  ({r+1}, {c+1})")
             print()
 
         # Use solver (with cache) to find definite safe/mine cells and update map
         solver = MinesweeperSolver(self.board, rules=self.rules, remaining_mines=self.remaining_mines)
         safes, mines = solver.find_definite_cells()
 
-        # Example: analyze a specific cell (4,2) if present (0-based indices)
-        target = (4, 2)
-        if 0 <= target[0] < solver.rows and 0 <= target[1] < solver.cols:
-            st = solver.find_cell_state(target)
-            print(f"Analysis for cell {target}: {st}")
+        # Example: analyze a specific cell (4,2) if present (1-based indices)
+        target_1b = (4, 2)
+        # convert to 0-based for bounds check
+        t0 = (target_1b[0] - 1, target_1b[1] - 1)
+        if 0 <= t0[0] < solver.rows and 0 <= t0[1] < solver.cols:
+            st = solver.find_cell_state_1based(target_1b)
+            print(f"Analysis for cell {target_1b}: {st}")
 
         if safes or mines:
             if mines:
                 print("Newly determined mines:")
                 for r, c in sorted(mines):
-                    print(f"  ({r}, {c})")
+                    # print as 1-based
+                    print(f"  ({r+1}, {c+1})")
                     self.board[r][c] = 'x'
                 print()
             if safes:
                 print("Newly determined safe cells:")
                 for r, c in sorted(safes):
-                    print(f"  ({r}, {c})")
+                    # print as 1-based
+                    print(f"  ({r+1}, {c+1})")
                     # Mark as suggested safe (will require revealing in real game)
                     self.board[r][c] = 'S'
                 print()
@@ -179,13 +185,15 @@ class MapSolver:
             next_move = solver.solve()
             if next_move:
                 r, c = next_move
+                # next_move is 1-based
                 print(f"Suggested safe cell (by hypothesis): ({r}, {c})")
-                self.board[r][c] = 'S'
+                # convert to 0-based to mark board
+                self.board[r-1][c-1] = 'S'
                 if self.write_map():
                     print(f"Updated map written to {self.map_file}")
                 print("Board with suggestion:")
                 for i, row in enumerate(self.board):
-                    print(f"  {' '.join(row)}  (row {i})")
+                    print(f"  {' '.join(row)}  (row {i+1})")
             else:
                 print("Could not find safe cell.")
         

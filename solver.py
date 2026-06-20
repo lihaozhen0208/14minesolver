@@ -256,6 +256,43 @@ class MinesweeperSolver:
         if cell in mines:
             return 'mine'
         return 'unknown'
+
+    # --- 1-based public wrappers ---
+    def _to_1based(self, cell: Tuple[int, int]) -> Tuple[int, int]:
+        return (cell[0] + 1, cell[1] + 1)
+
+    def _to_0based(self, cell: Tuple[int, int]) -> Tuple[int, int]:
+        return (cell[0] - 1, cell[1] - 1)
+
+    def find_definite_cells_one_based(self) -> Tuple[Set[Tuple[int, int]], Set[Tuple[int, int]]]:
+        """Return definite cells as 1-based coordinates."""
+        safes0, mines0 = self.find_definite_cells()
+        safes1 = {(r + 1, c + 1) for (r, c) in safes0}
+        mines1 = {(r + 1, c + 1) for (r, c) in mines0}
+        return safes1, mines1
+
+    def find_definite_safe_one_based(self) -> Set[Tuple[int, int]]:
+        safes0 = self.find_definite_safe()
+        return {(r + 1, c + 1) for (r, c) in safes0}
+
+    def find_definite_mines_one_based(self) -> Set[Tuple[int, int]]:
+        mines0 = self.find_definite_mines()
+        return {(r + 1, c + 1) for (r, c) in mines0}
+
+    def find_cell_state_1based(self, cell1: Tuple[int, int]) -> str:
+        """Return 'safe'|'mine'|'unknown' for a 1-based cell coordinate."""
+        r1, c1 = cell1
+        r0, c0 = r1 - 1, c1 - 1
+        if not (0 <= r0 < self.rows and 0 <= c0 < self.cols):
+            return 'unknown'
+        return self.find_cell_state((r0, c0))
+
+    def solve_one_based(self) -> Optional[Tuple[int, int]]:
+        """Return next safe cell as 1-based coordinate (or None)."""
+        res = self.solve()
+        if res is None:
+            return None
+        return (res[0] + 1, res[1] + 1)
     
     def can_have_solution_with_assumption(self, cell: Tuple[int, int], state: str) -> bool:
         """Check if there's a valid solution with assumption."""
